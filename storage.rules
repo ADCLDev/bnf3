@@ -1,0 +1,78 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      // Allow reading own document
+      allow read: if isOwner(userId);
+      
+      // Allow creating new user document
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll([
+          'uid', 
+          'email', 
+          'is_admin', 
+          'is_contributor', 
+          'is_subscriber', 
+          'profile',
+          'authProviders',
+          'createdAt',
+          'provider'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.is_admin == false     
+        && request.resource.data.is_contributor == false  
+        && request.resource.data.is_subscriber == false
+        && request.resource.data.profile is map
+        && request.resource.data.authProviders is list;
+      
+      // Allow updating own document
+      allow update: if isOwner(userId)
+        && (request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['authProviders', 'profile', 'email']) 
+            || !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['is_admin', 'is_contributor', 'is_subscriber']));
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+    
+    match /profile-images/{userId}/{imageId} {
+      allow read: if request.auth != null;
+      allow write, delete: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024 // 5MB
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    options {
+      cors: [{
+        origin: ['*'],
+        method: ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS'],
+        maxAgeSeconds: 3600,
+        responseHeader: ['Content-Type', 'Authorization', 'Content-Length', 'User-Agent', 'x-goog-resumable']
+      }];
+    }
+  }
+}
