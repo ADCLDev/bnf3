@@ -277,61 +277,61 @@ const TypeToolPopup = () => {
             
             <div className="flex-1 overflow-y-auto">
               {showPayment ? renderPaymentUI() : (
-                <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 py-4 max-w-5xl mx-auto">
-                    {tools.map((tool) => {
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 py-4 max-w-5xl mx-auto">
+                {tools.map((tool) => {
                       const styles = getToolStyles();
-                      
-                      return (
-                        <Card 
+                  
+                  return (
+                    <Card 
                           key={tool.id} 
-                          className={`relative p-6 lg:p-8 flex flex-col ${styles.card} border-2`}
-                        >
-                          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                            <span className={`px-4 py-1 rounded-full text-sm font-medium ${styles.badge}`}>
+                      className={`relative p-6 lg:p-8 flex flex-col ${styles.card} border-2`}
+                    >
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <span className={`px-4 py-1 rounded-full text-sm font-medium ${styles.badge}`}>
                               {tool.name}
-                            </span>
-                          </div>
-                          
-                          <div className="text-center mb-6">
-                            <div className="text-3xl lg:text-4xl font-bold mb-1">
+                        </span>
+                      </div>
+                      
+                      <div className="text-center mb-6">
+                        <div className="text-3xl lg:text-4xl font-bold mb-1">
                               ${tool.price}
-                            </div>
+                        </div>
                             <div className="text-gray-600 text-base lg:text-lg">per {tool.billingPeriod}</div>
-                          </div>
-                          
-                          <div className="space-y-4 flex-1">
-                            <div className="flex items-center text-base lg:text-lg">
-                              <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
+                      </div>
+                      
+                      <div className="space-y-4 flex-1">
+                        <div className="flex items-center text-base lg:text-lg">
+                          <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
                               <span>{tool.dailyLimit} Generations per day</span>
-                            </div>
-                            <div className="flex items-center text-base lg:text-lg">
-                              <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
+                        </div>
+                        <div className="flex items-center text-base lg:text-lg">
+                          <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
                               <span>Up to {tool.textLengthLimit} characters</span>
-                            </div>
-                            <div className="flex items-center text-base lg:text-lg">
-                              <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
+                        </div>
+                        <div className="flex items-center text-base lg:text-lg">
+                          <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
                               <span>{tool.description}</span>
-                            </div>
+                        </div>
                             {tool.trialDays > 0 && (
-                              <div className="flex items-center text-base lg:text-lg">
-                                <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
+                        <div className="flex items-center text-base lg:text-lg">
+                          <Check className={`h-5 w-5 ${styles.icon} mr-3 flex-shrink-0`} />
                                 <span>{tool.trialDays} days trial</span>
-                              </div>
+                        </div>
                             )}
-                          </div>
-                          
-                          <Button 
-                            className={`w-full mt-6 py-6 text-base lg:text-lg font-semibold ${styles.button}`}
+                      </div>
+                      
+                      <Button 
+                        className={`w-full mt-6 py-6 text-base lg:text-lg font-semibold ${styles.button}`}
                             onClick={() => handleSubscription(tool)}
                             disabled={loading || !tool.isActive}
-                          >
+                      >
                             {loading ? 'Processing...' : `Select ${tool.name} Plan`}
-                          </Button>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                      </Button>
+                    </Card>
+                  );
+                })}
+              </div>
                 </div>
               )}
             </div>

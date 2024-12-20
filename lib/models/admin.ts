@@ -1,14 +1,31 @@
-import { db } from '@/lib/firebase/config';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { 
+  getFirestore, 
   collection, 
-  query, 
-  getDocs, 
-  where, 
+  doc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
   Timestamp,
   DocumentSnapshot,
   orderBy,
-  limit 
+  limit,
 } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
+/* eslint-enable @typescript-eslint/no-unused-vars */
+
+// Define a more specific type for metadata
+interface ActivityMetadata {
+  fontId?: string;
+  subscriptionId?: string;
+  amount?: number;
+  status?: string;
+  reason?: string;
+  [key: string]: string | number | undefined;
+}
 
 export interface AdminOverviewStats {
   revenue: {
@@ -57,7 +74,7 @@ export interface AdminActivity {
   description: string;
   timestamp: Date;
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: ActivityMetadata;
   severity: 'info' | 'warning' | 'error';
 }
 
@@ -98,27 +115,25 @@ export class AdminModel {
     );
 
     const snapshot = await getDocs(revenueQuery);
-    let total = 0;
-    let subscriptions = 0;
-    let oneTime = 0;
-    let giftCards = 0;
-
-    snapshot.forEach((doc) => {
+    const total = snapshot.docs.reduce((acc, doc) => {
       const data = doc.data();
-      total += data.amount || 0;
-      
-      switch(data.type) {
-        case 'subscription':
-          subscriptions += data.amount || 0;
-          break;
-        case 'one_time':
-          oneTime += data.amount || 0;
-          break;
-        case 'gift_card':
-          giftCards += data.amount || 0;
-          break;
-      }
-    });
+      return acc + (data.amount || 0);
+    }, 0);
+
+    const subscriptions = snapshot.docs.reduce((acc, doc) => {
+      const data = doc.data();
+      return data.type === 'subscription' ? acc + (data.amount || 0) : acc;
+    }, 0);
+
+    const oneTime = snapshot.docs.reduce((acc, doc) => {
+      const data = doc.data();
+      return data.type === 'one_time' ? acc + (data.amount || 0) : acc;
+    }, 0);
+
+    const giftCards = snapshot.docs.reduce((acc, doc) => {
+      const data = doc.data();
+      return data.type === 'gift_card' ? acc + (data.amount || 0) : acc;
+    }, 0);
 
     // Calculate growth
     const previousMonthQuery = query(
@@ -126,10 +141,8 @@ export class AdminModel {
       where('timestamp', '<=', lastMonth)
     );
     const previousSnapshot = await getDocs(previousMonthQuery);
-    let previousTotal = 0;
-    previousSnapshot.forEach((doc) => {
-      previousTotal += doc.data().amount || 0;
-    });
+    const previousTotal = previousSnapshot.docs.reduce((acc, doc) => 
+      acc + (doc.data().amount || 0), 0);
 
     const growth = previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : 0;
 
@@ -149,24 +162,21 @@ export class AdminModel {
     const usersQuery = query(collection(db, 'users'));
     const snapshot = await getDocs(usersQuery);
     
-    let total = snapshot.size;
-    let subscribers = 0;
-    let contributors = 0;
-    let free = 0;
-    let active = 0;
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    snapshot.forEach((doc) => {
+    const total = snapshot.size;
+    const stats = snapshot.docs.reduce((acc, doc) => {
       const data = doc.data();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
       if (data.lastActive && data.lastActive.toDate() > thirtyDaysAgo) {
-        active++;
+        acc.active++;
       }
-      if (data.is_subscriber) subscribers++;
-      if (data.is_contributor) contributors++;
-      if (!data.is_subscriber && !data.is_contributor) free++;
-    });
+      if (data.is_subscriber) acc.subscribers++;
+      if (data.is_contributor) acc.contributors++;
+      if (!data.is_subscriber && !data.is_contributor) acc.free++;
+
+      return acc;
+    }, { active: 0, subscribers: 0, contributors: 0, free: 0 });
 
     // Calculate growth
     const lastMonth = new Date();
@@ -180,12 +190,12 @@ export class AdminModel {
 
     return {
       total,
-      active,
+      active: stats.active,
       growth,
       breakdown: {
-        subscribers,
-        contributors,
-        free
+        subscribers: stats.subscribers,
+        contributors: stats.contributors,
+        free: stats.free
       }
     };
   }
@@ -194,34 +204,21 @@ export class AdminModel {
     const fontsQuery = query(collection(db, 'fonts'));
     const snapshot = await getDocs(fontsQuery);
     
-    let total = snapshot.size;
-    let approved = 0;
-    let rejected = 0;
-    let inReview = 0;
-
-    snapshot.forEach((doc) => {
+    const total = snapshot.size;
+    const stats = snapshot.docs.reduce((acc, doc) => {
       const data = doc.data();
       switch(data.status) {
-        case 'approved':
-          approved++;
-          break;
-        case 'rejected':
-          rejected++;
-          break;
-        case 'pending':
-          inReview++;
-          break;
+        case 'approved': acc.approved++; break;
+        case 'rejected': acc.rejected++; break;
+        case 'pending': acc.inReview++; break;
       }
-    });
+      return acc;
+    }, { approved: 0, rejected: 0, inReview: 0 });
 
     return {
       total,
-      pending: inReview,
-      breakdown: {
-        approved,
-        rejected,
-        inReview
-      }
+      pending: stats.inReview,
+      breakdown: stats
     };
   }
 
@@ -232,25 +229,16 @@ export class AdminModel {
     );
     const snapshot = await getDocs(subsQuery);
     
-    let active = snapshot.size;
-    let basic = 0;
-    let pro = 0;
-    let enterprise = 0;
-
-    snapshot.forEach((doc) => {
+    const active = snapshot.size;
+    const stats = snapshot.docs.reduce((acc, doc) => {
       const data = doc.data();
       switch(data.plan) {
-        case 'basic':
-          basic++;
-          break;
-        case 'pro':
-          pro++;
-          break;
-        case 'enterprise':
-          enterprise++;
-          break;
+        case 'basic': acc.basic++; break;
+        case 'pro': acc.pro++; break;
+        case 'enterprise': acc.enterprise++; break;
       }
-    });
+      return acc;
+    }, { basic: 0, pro: 0, enterprise: 0 });
 
     // Calculate growth
     const lastMonth = new Date();
@@ -266,11 +254,7 @@ export class AdminModel {
     return {
       active,
       growth,
-      breakdown: {
-        basic,
-        pro,
-        enterprise
-      }
+      breakdown: stats
     };
   }
 

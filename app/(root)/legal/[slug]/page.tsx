@@ -1,6 +1,5 @@
 // app/(user)/legal/[slug]/page.tsx
-import LegalPage from '@/components/legal/LegalPage';
-import { Metadata } from 'next';
+import { LegalPageContent } from '@/components/legal/LegalPage';
 
 interface PageProps {
   params: {
@@ -8,6 +7,6 @@ interface PageProps {
   };
 }
 
-export default function Page({ params }: PageProps) {
-  return <LegalPage slug={params.slug} />;
+export default async function LegalPage({ params }: PageProps) {
+  return <LegalPageContent slug={params.slug} />;
 }

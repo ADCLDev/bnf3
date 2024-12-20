@@ -5,24 +5,37 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Shield } from 'lucide-react';
 
-interface LegalPageProps {
+interface LegalParagraph {
+  id: string;
+  title: string;
+  details: string;
+  order: number;
+}
+
+interface LegalDocument {
+  pageName: string;
+  description: string;
+  status: 'draft' | 'published';
+  paragraphs: LegalParagraph[];
+}
+
+interface LegalPageContentProps {
   slug: string;
 }
 
-const LegalPage: React.FC<LegalPageProps> = ({ slug }) => {
-  const [document, setDocument] = useState<any>(null);
+export function LegalPageContent({ slug }: LegalPageContentProps) {
+  const [document, setDocument] = useState<LegalDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDocument = async () => {
       try {
-        // Query the document by slug
         const docRef = doc(db, 'legal_documents', slug);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists() && docSnap.data().status === 'published') {
-          setDocument(docSnap.data());
+          setDocument(docSnap.data() as LegalDocument);
         } else {
           setError('Document not found');
         }
@@ -67,15 +80,15 @@ const LegalPage: React.FC<LegalPageProps> = ({ slug }) => {
       </div>
 
       <div className="space-y-8">
-        {document.paragraphs.sort((a: any, b: any) => a.order - b.order).map((paragraph: any) => (
-          <div key={paragraph.id} className="prose max-w-none">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">{paragraph.title}</h2>
-            <p className="text-gray-700 whitespace-pre-wrap">{paragraph.details}</p>
-          </div>
-        ))}
+        {document.paragraphs
+          .sort((a, b) => a.order - b.order)
+          .map((paragraph) => (
+            <div key={paragraph.id} className="prose max-w-none">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{paragraph.title}</h2>
+              <p className="text-gray-700 whitespace-pre-wrap">{paragraph.details}</p>
+            </div>
+          ))}
       </div>
     </div>
   );
-};
-
-export default LegalPage;
+}
